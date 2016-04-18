@@ -1,0 +1,416 @@
+#### 序言
+
+之前看了一篇国外大牛[Bohdan Orlov](https://medium.com/@borlov)写的关于 iOS 架构模式的文章，内容涉及目前 iOS 端诸多主流的模式，个人感觉文章写的很不错，收获匪浅，希望能够通过翻译原文的方式更好的体会一下，也分享给更多的人参考。原文地址[在这里](https://medium.com/ios-os-x-development/ios-architecture-patterns-ecba4c38de52#.sdi54bown)，并附上相关[PPT](http://slides.com/borlov/arch/fullscreen#/)，浏览原文可能需要科学上网。
+
+#### 正文
+
+在 iOS 开发中使用 MVC 是否感觉很怪异？对 MVVM 感到有疑问？听说过 VIPER，但是又不确定它是否有价值？继续阅读本文，你将会找到这些问题的答案，如果没有找到满意的答案，请在评论中随便吐槽吧。本文将帮助你建立起关于 iOS 端架构模式的知识体系。我们先来简要地回顾一些主流的架构，并且从理论和一些小例子的实践上进行比较。
+
+> 注意：学习设计模式是进阶阶段，因此在阅读本文之前，假设你已有一定的基础，不会再询问如下的问题：  
+>
+> 1、谁应该持有网络请求，Model 还是 Controller？
+>
+> 2、如何给View的ViewModel传递Model？ 
+>
+> 3、谁能创建一个VIPER模块：Router 还是 Presenter？
+
+#### 为什么要关心选择什么样的架构
+
+如果不关心架构，想象某天你调试一个巨大的类，里面有着数十个不同关联东西，你会发现几乎不可能定位问题点并修复bug。当然，你也很难去随心所欲地使用这个类，因为不了解类其中的一些重要细节。如果你在项目中已经遇到了这种场景，它可能是像这样的：
+
+> 1、这个类是UIViewController的子类
+> 
+> 2、数据直接存储在UIViewController中
+> 
+> 3、视图View没有任何操作
+> 
+> 4、Model的数据结构设计很糟糕
+> 
+> 5、没有单元测试覆盖
+
+即使你遵循了苹果指导意见并实现了[苹果的 MVC 模式](https://developer.apple.com/library/ios/documentation/General/Conceptual/DevPedia-CocoaCore/MVC.html)，这种情况还是可能会发生，不必觉得很难过。苹果的 MVC 有点问题，我们回头再说这件事情。让我们来定义一个好架构应该有的特征：
+
+> 1、严格划分，均衡分配实体间的角色和职责
+> 
+> 2、可测性通常是第一特性（不要担心：好架构一定具有可测性）
+> 
+> 3、便于使用，且维护成本低
+
+##### 为什么要划分
+
+当试图了解程序如何运行时，角色和职责划分能够让我们保持思路清晰。如果你的开发能力越强，你就越能理解复杂的事物。但是这种能力并不是线性增长的，会很快达到极限。因此降低复杂性的最简单办法是遵循**单一责任原则**，划分多个实体之间的职责。
+
+##### 为什么要可测性
+
+对于那些由于添加新特性，或者一些正在重构中的错综复杂的类来说，开发人员应该感激出现失败的单元测试，因为这些失败的单元测试可以帮助开发人员尽快定位运行中出现的bug，而这些bug可能出现在用户的设备上，甚至需要花费数周才能修复。
+
+##### 为什么要易用
+
+这不需要回答，但值得一提的是，最好的代码就是不用写代码，因此写的越少越不容易出错。这意味着想写少量代码的想法不仅仅是因为开发者的懒惰，而且你也不应当被一个更灵巧的解决方案所蒙蔽，而忽略了维护它的成本。
+
+#### MV(X)系列导论
+
+现在当我们要做架构设计时有很多种模式选择：
+
+* **[MVC](https://en.wikipedia.org/wiki/Model%E2%80%93view%E2%80%93controller)**
+* **[MVP](https://en.wikipedia.org/wiki/Model%E2%80%93view%E2%80%93presenter)**
+* **[MVVM](https://en.wikipedia.org/wiki/Model%E2%80%93view%E2%80%93viewmodel)**
+* **[VIPER](https://www.objc.io/issues/13-architecture/viper/)**
+
+前三者采用的都是把App中实体划分成3类：
+
+* **Models** - 负责持有数据，进行数据处理的数据访问层。设想一下`Person`，`PersonDataProvider`类。
+* **Views** - 负责数据展现层（Graphical User Interface），在iOS端可认为所有以`UI`前缀的类。
+* **Controller/Presenter/ViewModel** - 负责协调处理**Models**和**Views**之间的交互。
+
+通常用户操作视图会触发数据更新，数据的变更又会引起视图更新。这样的划分实体能让我们：
+
+* 更好的理解他们是如何工作的
+* 复用他们（通常可复用的是**Views**和**Models**）
+* 单独测试他们
+
+让我们开始学习**MV(X)**模式，稍后再说**VIPER**。
+
+##### 一、MVC（Model-View-Controller）
+
+在讨论Apple版本的MVC之前，我们先来看看传统的MVC
+![Traditional MVC](http://upload-images.jianshu.io/upload_images/1200910-3885caafacea4fe0.png?imageMogr2/auto-orient/strip%7CimageView2/2/w/1240)
+图示中，视图**Views**是无状态的，它只是当数据**Models**发生变化时，通过**Controller**控制简单地展现一下。设想当你点击网页上某个跳转链接时，整个网页就会重新加载。虽然在iOS应用程序中这种传统的MVC很容易实现，但这是没有意义的，因为架构上3类实体紧密的耦合在一起，每一类实体都要和其他两类产生关联，这会大大降低代码的可复用性。这不会是你想要的架构，由于以上原因，我们就不写这种MVC的典型例子了。
+> 传统的MVC不适合当前的iOS开发工作
+
+##### Apple版的MVC
+
+Apple期望的**Cocoa MVC**：
+![Cocoa MVC](http://upload-images.jianshu.io/upload_images/1200910-c61f640340ed8b4e.png?imageMogr2/auto-orient/strip%7CimageView2/2/w/1240)
+控制器**Controller**是视图**Views**和数据**Models**之间的中介，它们之间不需要有关联。可复用性最低的控制器**Controller**，通常是可以接受的，因为我们必须有一个地方来放置那些不适合放在数据**Models**中的所有复杂业务逻辑。理论上，它看上去非常简单明了，你是不是感觉到有什么问题？甚至听到过有人叫 MVC 为重控制器模式。此外，对于 iOS 开发者来说，给控制器减轻负担已经成为一个重要的话题。为什么苹果会采用仅仅改进过一点点的传统 MVC 模式呢？实际上的**Realistic Cocoa MVC**：
+![Realistic Cocoa MVC](http://upload-images.jianshu.io/upload_images/1200910-a32bf868aa34205a.png?imageMogr2/auto-orient/strip%7CimageView2/2/w/1240)
+**Cocoa MVC**鼓励你写重控制器是因为它们在**Views**的生命周期中相互依赖，以至于很难将它们分开。虽然你可能有办法把一些业务逻辑和数据转模型的工作放到**Models**中，但是对于分摊到**Views**上的工作却没有什么办法，大多数情况下，**Views**的所有功能就是给控制器**Controller**发送操作事件，而**Controller**最终会成为你可以想到所有东西的代理或者数据源，比如通常会负责发送或者取消网络请求等等。你经常会看到这样的代码：
+
+```
+var userCell = tableView.dequeueReusableCellWithIdentifier("identifier") as UserCell
+userCell.configureWithUser(user)
+```
+
+cell 作为一个视图**Views**直接通过**Models**进行配置，MVC 的原则被违反了，但这种情况一直在发生，大家也没觉得有什么错。如果你严格的遵守 MVC，那么你就需要通过**Controller**对 cell 进行配置，并且不把**Models**传进**Views**中，然而这将会更进一步地增加**Controller**的规模。
+> 把**Cocoa MVC**称作重控制器模式还是有一定道理的。
+
+问题直到需要进行单元测试了才会暴露出来（希望你的项目也一样）。由于**Controller**和**Views**紧紧的耦合在一起，单元测试变得很困难，因为你将不得不非常有想象力的去模拟**Views**的生命周期，写**Controller**测试代码时也必须尽可能把业务逻辑代码同**Views**的布局代码分离开。让我们来看一个简单的`playground`例子：
+
+```
+import UIKit
+
+struct Person { // Model
+    let firstName: String
+    let lastName: String
+}
+
+class GreetingViewController : UIViewController { // View + Controller
+    var person: Person!
+    let showGreetingButton = UIButton()
+    let greetingLabel = UILabel()
+    
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        self.showGreetingButton.addTarget(self, action: "didTapButton:", forControlEvents: .TouchUpInside)
+    }
+    
+    func didTapButton(button: UIButton) {
+        let greeting = "Hello" + " " + self.person.firstName + " " + self.person.lastName
+        self.greetingLabel.text = greeting
+        
+    }
+    // layout code goes here
+}
+// Assembling of MVC
+let model = Person(firstName: "David", lastName: "Blaine")
+let view = GreetingViewController()
+view.person = model;
+```
+> MVC架构可以在视图控制器中进行组装
+
+这段代码看上去不可测，对吧？我们可以把生成`greeting`字符串的代码封装到新的`GreetingModel`类中单独测试它。但是在不直接调用视图`UIView`相关方法（`viewDidLoad`，`didTapButton`这些方法可能会加载所有视图）的前提下，我们还是无法测试`GreetingViewController`内部任意的展现逻辑（虽然这个例子没有多少逻辑），这不利于单元测试。实际上，在一个模拟器（例如：iPhone 4S）上的测试并不能够保证在其他设备（例如：iPad）上也能运行良好。因此建议在单元测试中删除`Host Application`的配置，并且测试用例不要运行在模拟器上。
+> 视图和控制器之间的交互并不是真正的单元测试
+
+综上所述，**Cocoa MVC**似乎是一个相当糟糕的模式。让我们用文章开头提到的好架构特征来对它进行一个评估：
+
+* 划分 - **View**和**Model**确实是分离了，但是**View**和**Controller**还是紧紧地耦合在一起。
+* 可测试性 - 由于划分的不好，你可能只能测试你的**Model**。
+* 易用性 - 相比于其他模式代码量最小，此外门槛低，每个人都能熟练掌握，即使不是一个非常有经验的开发者也能进行维护。
+
+如果对于你的小项目，不打算投入很多时间去设计架构，也不打算投入太多成本去维护，那么**Cocoa MVC**是你要选择的模式。
+> 在开发速度上，**Cocoa MVC**是最好的架构模式。
+
+##### 二、MVP（Model-View-Presenter）
+**Cocoa MVC**的演变
+![Passive View variant of MVP](http://upload-images.jianshu.io/upload_images/1200910-9baeb421012b2c2f.png?imageMogr2/auto-orient/strip%7CimageView2/2/w/1240)
+看上去是不是很像**Cocoa MVC**？的确很像，只是名叫**MVP**（Passive View Variant）。稍等。。。这是否意味着**MVP**的实质就是**Cocoa MVC**呢？当然不是，因为你回想一下**View**和**Controller**紧紧耦合在一起的位置，在**MVP**中是**Presenter** ，它与视图控制器的生命周期没有任何关联，并且由于没有任何布局的代码，很容易模拟视图**View**。它的职责是更新**View**中的数据和状态。
+> 如果我告诉你`UIViewController`就是视图，会怎么样
+
+在**MVP**方面，`UIViewController`的子类实际上是视图而不是**Presenter**。这种差别提供了很好的可测性，但会降低一定的开发速度，因为你不得不手动管理数据和绑定事件。举个例子：
+
+```
+import UIKit
+
+struct Person { // Model
+    let firstName: String
+    let lastName: String
+}
+
+protocol GreetingView: class {
+    func setGreeting(greeting: String)
+}
+
+protocol GreetingViewPresenter {
+    init(view: GreetingView, person: Person)
+    func showGreeting()
+}
+
+class GreetingPresenter : GreetingViewPresenter {
+    unowned let view: GreetingView
+    let person: Person
+    required init(view: GreetingView, person: Person) {
+        self.view = view
+        self.person = person
+    }
+    func showGreeting() {
+        let greeting = "Hello" + " " + self.person.firstName + " " + self.person.lastName
+        self.view.setGreeting(greeting)
+    }
+}
+
+class GreetingViewController : UIViewController, GreetingView {
+    var presenter: GreetingViewPresenter!
+    let showGreetingButton = UIButton()
+    let greetingLabel = UILabel()
+    
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        self.showGreetingButton.addTarget(self, action: "didTapButton:", forControlEvents: .TouchUpInside)
+    }
+    
+    func didTapButton(button: UIButton) {
+        self.presenter.showGreeting()
+    }
+    
+    func setGreeting(greeting: String) {
+        self.greetingLabel.text = greeting
+    }
+    
+    // layout code goes here
+}
+// Assembling of MVP
+let model = Person(firstName: "David", lastName: "Blaine")
+let view = GreetingViewController()
+let presenter = GreetingPresenter(view: view, person: model)
+view.presenter = presenter
+```
+##### 关于组合的重要说明
+**MVP**是第一个揭示了实际上由3个独立分层会存在组合问题的模式。既然我们并不希望**View**和**Model**耦合，在视图控制器中（实际上是**View**）组装它们就是不正确的，因此我们需要在其他地方处理。例如，我们可以让App范围内的路由服务来负责处理View与View之间的展现。这个问题不仅**MVP**中存在，后面将要介绍的所有模式中也都存在。我们来看看**MVP**的特征：
+
+* 划分 - 大部分职责都被划分给了**Presenter**和**Model**，**View**没有任何职责（例子中的Model也没有职责）。
+* 可测试性 - 很好，我们可以测试大部门业务逻辑，因为**View**无职责。
+* 易用性 - 在我们那个的不切实际的例子中，代码量比**MVC**翻了一倍，但同时，**MVP**的设计思路非常清晰。
+
+> 在iOS开发中使用**MVP**模式意味着良好的可测性和很多的代码量。
+
+##### 基于绑定和监控
+还有另外一种形式的**MVP**模式 — 带监控器的**MVP**。这种模式的特点包括直接绑定**View**和**Model**，同时**Presenter**（监控器）仍然控制着**View**上的操作事件，并能改变**View**的展现。
+![Supervising Presenter variant of the MVP](http://upload-images.jianshu.io/upload_images/1200910-03817db5db459ef8.png?imageMogr2/auto-orient/strip%7CimageView2/2/w/1240)
+但正如我们之前认识到的，模糊不清的职责分配是不好的设计，**View**和**Model**也紧紧的耦合在一起。这种模式跟Cocoa桌面端程序开发相似。和传统的**MVC**模式一样，对于有缺陷的架构，我认为没有必要再举例。
+
+##### 三、MVVM（Model-View-ViewModel）
+**MVVM**是最新的**MV(X)**系列架构，我们希望它在设计之初就已经考虑到之前的**MV(X)**系列所面临的问题。从理论上来看，Model-View-ViewModel看起来不错。**View**和**Model**我们已经很熟悉了，但中间层换成了**ViewModel**。
+![MVVM](http://upload-images.jianshu.io/upload_images/1200910-97a18a72a52ca888.png?imageMogr2/auto-orient/strip%7CimageView2/2/w/1240)
+它和**MVP**模式很像：
+
+* 视图控制器划分成**View**
+* **View**和**Model**之间没有紧密的耦合
+
+此外，数据绑定的概念很像带监控器的**MVP**，不同的是这次绑定的是**View**和**ViewModel**，而不是**View**和**Model**。那么在实际的iOS开发中**ViewModel**是什么？从根本上来说，它是独立于`UIKit`能够展现你的**View**和状态。**ViewModel**可以调用**Model**来改变数据，也可以通过数据变更来更新自己，因为**View**和**ViewModel**进行了绑定，相应地也就能同步更新**View**。
+
+##### 绑定
+在介绍**MVP**部分我简要地提到绑定的概念，但我们还是在这里讨论一下它。绑定来源于OS X开发环境，在iOS开发中没有。当然我们可以使用`KVO`和消息通知机制，但都不如绑定方便。因此，如果我们不想自己实现一套绑定机制，有两种选择：
+
+* 基于`KVO`的数据绑定库，比如[RZDataBinding](https://github.com/Raizlabs/RZDataBinding)，[SwiftBond](https://github.com/SwiftBond/Bond)
+* 全量级的[函数式响应编程框架](https://gist.github.com/JaviLorbada/4a7bd6129275ebefd5a6)，比如[ReactiveCocoa](https://github.com/ReactiveCocoa/ReactiveCocoa)，[RxSwift](https://github.com/ReactiveX/RxSwift/)，[PromiseKit](https://github.com/mxcl/PromiseKit)
+
+实际上，当你听到**MVVM**就会联想到`ReactiveCocoa`，反之亦然。虽然使用`ReactiveCocoa`框架可能是你很容易建立起基于绑定的**MVVM**，并且发挥出它的最大价值，但响应式框架有一个痛苦的现实：能力越大，责任也就越大。当你使用响应式框架的时候很容易就搞得乱七八糟，换句话说，如果出现bug，你将会花费大量的时间去调试bug，看看下面的调用堆栈图。
+![Reactive Call Stack](http://upload-images.jianshu.io/upload_images/1200910-66a0376d2e3269d8.png?imageMogr2/auto-orient/strip%7CimageView2/2/w/1240)
+
+在我们的简单例子中，无论是使用函数响应式框架，还是`KVO`都有点大材小用。我们换另外的方式，通过调用`showGreeting`方法来请求**View Model**更新**View**，使用`greetingDidChange`回调函数作为简单的属性。
+
+```
+import UIKit
+
+struct Person { // Model
+    let firstName: String
+    let lastName: String
+}
+
+protocol GreetingViewModelProtocol: class {
+    var greeting: String? { get }
+    var greetingDidChange: ((GreetingViewModelProtocol) -> ())? { get set } // function to call when greeting did change
+    init(person: Person)
+    func showGreeting()
+}
+
+class GreetingViewModel : GreetingViewModelProtocol {
+    let person: Person
+    var greeting: String? {
+        didSet {
+            self.greetingDidChange?(self)
+        }
+    }
+    var greetingDidChange: ((GreetingViewModelProtocol) -> ())?
+    required init(person: Person) {
+        self.person = person
+    }
+    func showGreeting() {
+        self.greeting = "Hello" + " " + self.person.firstName + " " + self.person.lastName
+    }
+}
+
+class GreetingViewController : UIViewController {
+    var viewModel: GreetingViewModelProtocol! {
+        didSet {
+            self.viewModel.greetingDidChange = { [unowned self] viewModel in
+                self.greetingLabel.text = viewModel.greeting
+            }
+        }
+    }
+    let showGreetingButton = UIButton()
+    let greetingLabel = UILabel()
+    
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        self.showGreetingButton.addTarget(self.viewModel, action: "showGreeting", forControlEvents: .TouchUpInside)
+    }
+    // layout code goes here
+}
+// Assembling of MVVM
+let model = Person(firstName: "David", lastName: "Blaine")
+let viewModel = GreetingViewModel(person: model)
+let view = GreetingViewController()
+view.viewModel = viewModel
+```
+再来看看**MVVM**的特征：
+
+* 划分 - 在我们这个小例子中看到的不是很清晰，但实际上，**MVVM**中的**View**承担了比**MVP**要多的职责。首先它需要绑定**ViewModel**来更新状态，其次它需要传递所有的事件消息而不需要更新事件的提供者。
+* 可测试性 - **ViewModel**并不持有**View**，这让我们很容易测试它。**View**也可以测试，但它依赖`UIKit`通常会忽略掉。
+* 易用性 - 代码量和**MVP**一样多，但真实的App开发中如果采用绑定机制，去替换那些传递事件和手动更新的代码，会减少很多代码量。
+
+> **MVVM**是非常吸引人的，因为它结合了前面提及的几种模式的优点，此外使用绑定机制不需要编写额外的视图更新代码，并且保持了良好的可测试性。
+
+##### 四、VIPER（View-Interactor-Presenter-Entity-Routing）
+从搭积木中领悟的iOS设计
+
+**VIPER**是本文最后一个介绍的架构模式，它很有趣，不属于**MV(X) **系列的扩展。到目前为止，你必须意识到一个好的设计一定有细粒度的职责划分。**VIPER**从另一个不同的角度进行了职责划分，这次我们分为5层：
+![VIPER](http://upload-images.jianshu.io/upload_images/1200910-be9d6cfc80104b57.png?imageMogr2/auto-orient/strip%7CimageView2/2/w/1240)
+
+* **交互器**：包含与数据（**实体**）或网络相关的业务逻辑，比如从服务器获取一些新的数据实体，为了这些目的，你会使用一些`Services`和`Managers`，它们并不被认为属于**VIPER**中的一部分，更确切地说它们是一种额外的依赖。
+* **展示器**：包含一些与UI相关（`UIKit`除外）的业务逻辑，通过交互器调用方法。
+* **实体**：纯粹的数据对象，不包含数据访问层，因为这是交互器的职责。
+* **路由器**：负责**VIPER**模块之间的切换。从根本上说，粒度划分方式，**VIPER**模块可以用来设计一个场景的功能，也可以用来设计应用中的一个完整用户故事—比如身份验证，是由一个场景或者若干场景组成，应该用多大的积木块来搭乐高玩具，完全取决于你。
+
+同**MV(X)**系列对比，我们会发现在职责划分上有一些不同点：
+
+* **Model** — 数据交互逻辑被转移到了交互器**Interactor**中，**Entities**只有纯粹的数据结构。
+* **Controller/Presenter/ViewModel**中的UI展现职责转移到了交互器**Interactor**中，但它没有更改数据的能力。
+* **VIPER**是第一个明确提出地址导航职责应该由路由器**Router**来解决。
+
+> 在iOS应用中找到一种合适的路由方式是一个挑战，**MV(X)**系列模式都没有定位到这个问题。
+
+下面的**VIPER**例子中没有涉及到模块之间的路由或交互，当然在**MV(X)**系列模式中也根本没有涉及。
+
+```
+import UIKit
+
+struct Person { // Entity (usually more complex e.g. NSManagedObject)
+    let firstName: String
+    let lastName: String
+}
+
+struct GreetingData { // Transport data structure (not Entity)
+    let greeting: String
+    let subject: String
+}
+
+protocol GreetingProvider {
+    func provideGreetingData()
+}
+
+protocol GreetingOutput: class {
+    func receiveGreetingData(greetingData: GreetingData)
+}
+
+class GreetingInteractor : GreetingProvider {
+    weak var output: GreetingOutput!
+    
+    func provideGreetingData() {
+        let person = Person(firstName: "David", lastName: "Blaine") // usually comes from data access layer
+        let subject = person.firstName + " " + person.lastName
+        let greeting = GreetingData(greeting: "Hello", subject: subject)
+        self.output.receiveGreetingData(greeting)
+    }
+}
+
+protocol GreetingViewEventHandler {
+    func didTapShowGreetingButton()
+}
+
+protocol GreetingView: class {
+    func setGreeting(greeting: String)
+}
+
+class GreetingPresenter : GreetingOutput, GreetingViewEventHandler {
+    weak var view: GreetingView!
+    var greetingProvider: GreetingProvider!
+    
+    func didTapShowGreetingButton() {
+        self.greetingProvider.provideGreetingData()
+    }
+    
+    func receiveGreetingData(greetingData: GreetingData) {
+        let greeting = greetingData.greeting + " " + greetingData.subject
+        self.view.setGreeting(greeting)
+    }
+}
+
+class GreetingViewController : UIViewController, GreetingView {
+    var eventHandler: GreetingViewEventHandler!
+    let showGreetingButton = UIButton()
+    let greetingLabel = UILabel()
+    
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        self.showGreetingButton.addTarget(self, action: "didTapButton:", forControlEvents: .TouchUpInside)
+    }
+    
+    func didTapButton(button: UIButton) {
+        self.eventHandler.didTapShowGreetingButton()
+    }
+    
+    func setGreeting(greeting: String) {
+        self.greetingLabel.text = greeting
+    }
+    
+    // layout code goes here
+}
+// Assembling of VIPER module, without Router
+let view = GreetingViewController()
+let presenter = GreetingPresenter()
+let interactor = GreetingInteractor()
+view.eventHandler = presenter
+presenter.view = view
+presenter.greetingProvider = interactor
+interactor.output = presenter
+```
+让我们再来看看**VIPER**的特征：
+* 划分 - 毫无疑问，**VIPER**在职责划分上是最好的。
+* 可测试性 - 毫无悬念，好的职责划分必然有好的可测性。
+* 易用性 - 由于上述两个特征你就可以猜测到代码维护性成本很高，你不得不编写大量的接口类来完成很小的职责。
+
+#### 总结
+我们已经从头到尾地了解了几种架构模式，希望你能从中找到那些曾经困扰你很久的问题的答案。但我毫不怀疑，你已经意识到了没有什么银色子弹，选择什么样的架构设计是特定场景下权衡各种因素之后的结果。因此，在同一个app中就会出现混合架构设计。比如：一开始使用**MVC**，然后你发现有一些特殊场景如果使用**MVC**将会难以维护，这时你可以仅对这个场景使用**MVVM**模式，没必要去重构那些**MVC**架构执行的很好的模块。**MV(X)**系列是互相兼容的。
+
+> Make everything as simple as possible, but not simpler. -- Albert Einstein
