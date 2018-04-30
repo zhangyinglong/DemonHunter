@@ -21,9 +21,10 @@ paginate: 10
 paginate_path: "page/:num/"
 
 # Comment
-comment:
-    disqus: zhangyinglong
-    # duoshuo:
+# comment:
+#     disqus: zhangyinglong
+#     duoshuo: zhangyinglong
+
 # Social
 social:
     # weibo: zhangyinglong
