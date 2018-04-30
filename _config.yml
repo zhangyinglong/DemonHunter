@@ -31,6 +31,8 @@ social:
     # twitter: zhangyinglong
     mail: zyl04401@gmail.com
 
+theme: jekyll-theme-cayman
+
 # Google Analytics
 # ga:
 #     id: UA-xxxx-x
