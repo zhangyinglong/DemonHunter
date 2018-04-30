@@ -2,38 +2,36 @@
 title: DemonHuner的技术博客
 description: '记录在工作学习中的笔记，专注于分享移动开发领域高质量文章，努力做一个徘徊于牛A和牛C之间的人'
 url: 'https://github.com/zhangyinglong/DemonHunter'
-baseurl: '/'
-# google_analytics: 'UA-XXXXXX-X'
-# disqus_shortname: 'your-disqus-name'
 
-author:
-  name: 'zhangyinglong'
-  email: zyl04401@gmail.com
-  twitter_username: zhangyinglong
-  facebook_username: 张应龙
-  github_username:  zhangyinglong
-  linkedin_username:  张应龙
+permalink: /:year/:month/:title/
 
-defaults:
-  -
-    scope:
-      path: ''
-      type: 'posts'
-    values:
-        layout: 'post'
-
-# Build settings
-destination: _site
-paginate: 10
-permalink: /:year/:title/
-# markdown: redcarpet #rdiscount #kramdown
+# Format
 highlighter: rouge
 
-kramdown:
-  # use Github Flavored Markdown
-  input: GFM
-  # do not replace newlines by <br>s
-  hard_wrap: false
+# supported colors: blue, green, purple, red, orange or slate. If you need clear, leave it empty.
+cover_color: 
 
-plugins: ['jekyll-paginate']
-exclude: ['README.md', 'Gemfile', 'Gemfile.lock', 'screenshot.png']
+blog_button:
+    title: 博客
+    description: 访问博客
+
+# Pagination
+plugins: [jekyll-paginate]
+paginate: 10
+paginate_path: "page/:num/"
+
+# Comment
+comment:
+    disqus: zhangyinglong
+    # duoshuo:
+# Social
+social:
+    # weibo: zhangyinglong
+    github: zhangyinglong
+    # twitter: zhangyinglong
+    mail: zyl04401@gmail.com
+
+# Google Analytics
+# ga:
+#     id: UA-xxxx-x
+#     host: xxxx.com
