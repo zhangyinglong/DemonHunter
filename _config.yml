@@ -26,7 +26,7 @@ defaults:
 destination: _site
 paginate: 10
 permalink: /:year/:title/
-markdown: redcarpet #rdiscount #kramdown
+# markdown: redcarpet #rdiscount #kramdown
 highlighter: rouge
 
 kramdown:
@@ -35,5 +35,5 @@ kramdown:
   # do not replace newlines by <br>s
   hard_wrap: false
 
-gems: ['jekyll-paginate']
+plugins: ['jekyll-paginate']
 exclude: ['README.md', 'Gemfile', 'Gemfile.lock', 'screenshot.png']
