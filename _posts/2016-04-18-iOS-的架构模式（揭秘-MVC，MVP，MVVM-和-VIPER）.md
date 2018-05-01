@@ -1,3 +1,11 @@
+---
+layout:     post
+title:      iOS-的架构模式（揭秘-MVC，MVP，MVVM-和-VIPER）
+date:       2016-04-18
+author:     Zhang yinglong
+tags: iOS
+---
+
 #### 序言
 
 之前看了一篇国外大牛[Bohdan Orlov](https://medium.com/@borlov)写的关于 iOS 架构模式的文章，内容涉及目前 iOS 端诸多主流的模式，个人感觉文章写的很不错，收获匪浅，希望能够通过翻译原文的方式更好的体会一下，也分享给更多的人参考。原文地址[在这里](https://medium.com/ios-os-x-development/ios-architecture-patterns-ecba4c38de52#.sdi54bown)，并附上相关[PPT](http://slides.com/borlov/arch/fullscreen#/)，浏览原文可能需要科学上网。
@@ -74,16 +82,16 @@
 ##### 一、MVC（Model-View-Controller）
 
 在讨论Apple版本的MVC之前，我们先来看看传统的MVC
-![Traditional MVC](http://upload-images.jianshu.io/upload_images/1200910-3885caafacea4fe0.png?imageMogr2/auto-orient/strip%7CimageView2/2/w/1240)
+![Traditional MVC](/assets/images/2016/1200910-3885caafacea4fe0.png)
 图示中，视图**Views**是无状态的，它只是当数据**Models**发生变化时，通过**Controller**控制简单地展现一下。设想当你点击网页上某个跳转链接时，整个网页就会重新加载。虽然在iOS应用程序中这种传统的MVC很容易实现，但这是没有意义的，因为架构上3类实体紧密的耦合在一起，每一类实体都要和其他两类产生关联，这会大大降低代码的可复用性。这不会是你想要的架构，由于以上原因，我们就不写这种MVC的典型例子了。
 > 传统的MVC不适合当前的iOS开发工作
 
 ##### Apple版的MVC
 
 Apple期望的**Cocoa MVC**：
-![Cocoa MVC](http://upload-images.jianshu.io/upload_images/1200910-c61f640340ed8b4e.png?imageMogr2/auto-orient/strip%7CimageView2/2/w/1240)
+![Cocoa MVC](/assets/images/2016/1200910-c61f640340ed8b4e.png)
 控制器**Controller**是视图**Views**和数据**Models**之间的中介，它们之间不需要有关联。可复用性最低的控制器**Controller**，通常是可以接受的，因为我们必须有一个地方来放置那些不适合放在数据**Models**中的所有复杂业务逻辑。理论上，它看上去非常简单明了，你是不是感觉到有什么问题？甚至听到过有人叫 MVC 为重控制器模式。此外，对于 iOS 开发者来说，给控制器减轻负担已经成为一个重要的话题。为什么苹果会采用仅仅改进过一点点的传统 MVC 模式呢？实际上的**Realistic Cocoa MVC**：
-![Realistic Cocoa MVC](http://upload-images.jianshu.io/upload_images/1200910-a32bf868aa34205a.png?imageMogr2/auto-orient/strip%7CimageView2/2/w/1240)
+![Realistic Cocoa MVC](/assets/images/2016/1200910-a32bf868aa34205a.png)
 **Cocoa MVC**鼓励你写重控制器是因为它们在**Views**的生命周期中相互依赖，以至于很难将它们分开。虽然你可能有办法把一些业务逻辑和数据转模型的工作放到**Models**中，但是对于分摊到**Views**上的工作却没有什么办法，大多数情况下，**Views**的所有功能就是给控制器**Controller**发送操作事件，而**Controller**最终会成为你可以想到所有东西的代理或者数据源，比如通常会负责发送或者取消网络请求等等。你经常会看到这样的代码：
 
 ```
@@ -142,7 +150,7 @@ view.person = model;
 
 ##### 二、MVP（Model-View-Presenter）
 **Cocoa MVC**的演变
-![Passive View variant of MVP](http://upload-images.jianshu.io/upload_images/1200910-9baeb421012b2c2f.png?imageMogr2/auto-orient/strip%7CimageView2/2/w/1240)
+![Passive View variant of MVP](/assets/images/2016/1200910-9baeb421012b2c2f.png)
 看上去是不是很像**Cocoa MVC**？的确很像，只是名叫**MVP**（Passive View Variant）。稍等。。。这是否意味着**MVP**的实质就是**Cocoa MVC**呢？当然不是，因为你回想一下**View**和**Controller**紧紧耦合在一起的位置，在**MVP**中是**Presenter** ，它与视图控制器的生命周期没有任何关联，并且由于没有任何布局的代码，很容易模拟视图**View**。它的职责是更新**View**中的数据和状态。
 > 如果我告诉你`UIViewController`就是视图，会怎么样
 
@@ -215,12 +223,12 @@ view.presenter = presenter
 
 ##### 基于绑定和监控
 还有另外一种形式的**MVP**模式 — 带监控器的**MVP**。这种模式的特点包括直接绑定**View**和**Model**，同时**Presenter**（监控器）仍然控制着**View**上的操作事件，并能改变**View**的展现。
-![Supervising Presenter variant of the MVP](http://upload-images.jianshu.io/upload_images/1200910-03817db5db459ef8.png?imageMogr2/auto-orient/strip%7CimageView2/2/w/1240)
+![Supervising Presenter variant of the MVP](/assets/images/2016/1200910-03817db5db459ef8.png)
 但正如我们之前认识到的，模糊不清的职责分配是不好的设计，**View**和**Model**也紧紧的耦合在一起。这种模式跟Cocoa桌面端程序开发相似。和传统的**MVC**模式一样，对于有缺陷的架构，我认为没有必要再举例。
 
 ##### 三、MVVM（Model-View-ViewModel）
 **MVVM**是最新的**MV(X)**系列架构，我们希望它在设计之初就已经考虑到之前的**MV(X)**系列所面临的问题。从理论上来看，Model-View-ViewModel看起来不错。**View**和**Model**我们已经很熟悉了，但中间层换成了**ViewModel**。
-![MVVM](http://upload-images.jianshu.io/upload_images/1200910-97a18a72a52ca888.png?imageMogr2/auto-orient/strip%7CimageView2/2/w/1240)
+![MVVM](/assets/images/2016/1200910-97a18a72a52ca888.png)
 它和**MVP**模式很像：
 
 * 视图控制器划分成**View**
@@ -235,7 +243,7 @@ view.presenter = presenter
 * 全量级的[函数式响应编程框架](https://gist.github.com/JaviLorbada/4a7bd6129275ebefd5a6)，比如[ReactiveCocoa](https://github.com/ReactiveCocoa/ReactiveCocoa)，[RxSwift](https://github.com/ReactiveX/RxSwift/)，[PromiseKit](https://github.com/mxcl/PromiseKit)
 
 实际上，当你听到**MVVM**就会联想到`ReactiveCocoa`，反之亦然。虽然使用`ReactiveCocoa`框架可能是你很容易建立起基于绑定的**MVVM**，并且发挥出它的最大价值，但响应式框架有一个痛苦的现实：能力越大，责任也就越大。当你使用响应式框架的时候很容易就搞得乱七八糟，换句话说，如果出现bug，你将会花费大量的时间去调试bug，看看下面的调用堆栈图。
-![Reactive Call Stack](http://upload-images.jianshu.io/upload_images/1200910-66a0376d2e3269d8.png?imageMogr2/auto-orient/strip%7CimageView2/2/w/1240)
+![Reactive Call Stack](/assets/images/2016/1200910-66a0376d2e3269d8.png)
 
 在我们的简单例子中，无论是使用函数响应式框架，还是`KVO`都有点大材小用。我们换另外的方式，通过调用`showGreeting`方法来请求**View Model**更新**View**，使用`greetingDidChange`回调函数作为简单的属性。
 
@@ -305,7 +313,7 @@ view.viewModel = viewModel
 从搭积木中领悟的iOS设计
 
 **VIPER**是本文最后一个介绍的架构模式，它很有趣，不属于**MV(X) **系列的扩展。到目前为止，你必须意识到一个好的设计一定有细粒度的职责划分。**VIPER**从另一个不同的角度进行了职责划分，这次我们分为5层：
-![VIPER](http://upload-images.jianshu.io/upload_images/1200910-be9d6cfc80104b57.png?imageMogr2/auto-orient/strip%7CimageView2/2/w/1240)
+![VIPER](/assets/images/2016/1200910-be9d6cfc80104b57.png)
 
 * **交互器**：包含与数据（**实体**）或网络相关的业务逻辑，比如从服务器获取一些新的数据实体，为了这些目的，你会使用一些`Services`和`Managers`，它们并不被认为属于**VIPER**中的一部分，更确切地说它们是一种额外的依赖。
 * **展示器**：包含一些与UI相关（`UIKit`除外）的业务逻辑，通过交互器调用方法。
