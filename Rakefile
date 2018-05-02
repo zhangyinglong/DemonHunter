@@ -28,7 +28,7 @@ task :new do
 			file.puts "title:      \"#{@name}\""
 			file.puts "date:       #{Time.now}"
 			file.puts "author:     \"#{@author}\""
-			file.puts "categories: #{@categories}"
+			file.puts "tags: #{@categories}"
 			file.puts "published: false"
 			file.puts "---"
 		end
