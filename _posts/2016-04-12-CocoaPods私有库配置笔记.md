@@ -1,9 +1,9 @@
 ---
 layout:     post
 title:      CocoaPods私有库配置
-date:       2016-04-12
+date:       2016-04-12 23:59:41 +0800
 author:     Zhang yinglong
-tags: iOS
+tags:       iOS
 ---
 
 `CocoaPods`是一个iOS，Mac OS下强大的依赖包工具，不仅用来管理第三方开源代码的项目代码，您也可以通过配置公共组件的私有pods库，来管理整个项目中的公共组件。**通过下面几个步骤，您可以为项目创建私有pods库**。
